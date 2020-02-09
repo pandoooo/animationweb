@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+      <meta charset="UTF-8">
+      <title>Canvas Animation</title>
+      <style>
+          * {
+              margin: 0;
+              padding: 0;
+          }
+          body {
+              width: 100%;
+              height: 100%;
+              background-color: grey;
+          }
+          #canevas {
+              background-color: #f4f5f6;
+          }
+          input{
+            margin-top: 40px;
+            background-color:#a7a7a7;
+            border: 0px;
+            padding: 10px;
+          }
+          #fileElem{
+            margin-top: 40px;
+            background-color:#a7a7a7;
+            border: 0px;
+            padding: 10px;
+          }
+      </style>
+  </head>
+  <body>
+      <canvas id="canevas" width="650" height="450"> </canvas>
+      <input id="btninversion" type="button" value="Inversion">
+      <input id="btnniveaudegris" type="button" value="Niveau de gris">
+      <input id="btnsepia" type="button" value="Sepia">
+      <input id="btneclaircissement" type="button" value="Eclaircissement">
+      <input id="btnflouter" type="button" value="Flouter">
+      <input id="btnsobel" type="button" value="Sobel">
+
+      <input type="file" id="fileElem" accept=".jpg" onclick="Upload()">
+      <input id="fileexport" type="button" value="Export" onclick="download(canevas.toDataURL(),img.names);">
+  </body>
+
+
+  <script type="text/javascript">
+
+var fileinput= document.getElementById('fileElem');
+var img = new Image();
+var canevas = document.getElementById('canevas');
+var ctx = canevas.getContext('2d');
+
+
+function Upload() {
+    fileinput.onchange = function(evt){
+        var files =evt.target.files;
+        var file =files[0];
+        if(file.type.match("image.*")){
+            var reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload =function(evt){
+                if(evt.target.readyState == FileReader.DONE){
+                    img.src =evt.target.result;
+                    img.onload = ()=> ctx.drawImage(img, 0, 0);
+                          img.style.display = 'none';
+                          var imageData = ctx.getImageData(0, 0, canevas.width, canevas.height);
+                          var data = imageData.data;
+                }
+            }
+        }else {
+            alert("not an image")
+        }
+
+    };
+};
+
+function download(url, fileName) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.responseType = "blob";
+    xhr.onload = function(){
+        var urlCreator = window.URL || window.webkitURL;
+        var imageUrl = urlCreator.createObjectURL(this.response);
+        var tag = document.createElement('a');
+        tag.href = imageUrl;
+        tag.download = fileName;
+        document.body.appendChild(tag);
+        tag.click();
+        document.body.removeChild(tag);
+    }
+    xhr.send();
+};
+
+
+    var img = new Image();
+    img.src = './Couscous-tacheté.jpg';
+    img.onload = function() {
+      dessiner(this);
+    };
+
+    function dessiner(img) {
+      var canevas = document.getElementById('canevas');
+      var ctx = canevas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      img.style.display = 'none';
+      var imageData = ctx.getImageData(0, 0, canevas.width, canevas.height);
+      var data = imageData.data;
+
+      var inversion = function() {
+        for (var i = 0; i < data.length; i += 4) {
+          data[i]     = 255 - data[i];     // rouge
+          data[i + 1] = 255 - data[i + 1]; // vert
+          data[i + 2] = 255 - data[i + 2]; // bleu
+        }
+        ctx.putImageData(imageData, 0, 0);
+      };
+
+      var niveaudegris = function() {
+        for (var i = 0; i < data.length; i += 4) {
+          var moy = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          data[i]     = moy; // rouge
+          data[i + 1] = moy; // vert
+          data[i + 2] = moy; // bleu
+        }
+        ctx.putImageData(imageData, 0, 0);
+      };
+
+      var sepia = function() {
+        for (var i = 0; i < data.length; i += 4) {
+          var r, g, b;
+          r = parseFloat(data[i]);
+          g = parseFloat(data[i + 1]);
+          b = parseFloat(data[i + 2]);
+          data[i] = 0.3 * (r + g + b);
+          data[i + 1] = 0.25 * (r + g + b);
+          data[i + 2] = 0.20 * (r + g + b);
+        }
+        ctx.putImageData(imageData, 0, 0);
+      };
+
+      var eclaircissement = function() {
+        for (var i = 0; i < data.length; i += 4) {
+          data[i]     = data[i] + 25;     // rouge
+          data[i + 1] = data[i + 1]  + 25; // vert
+          data[i + 2] = data[i + 2]  + 25; // bleu
+        }
+        ctx.putImageData(imageData, 0, 0);
+      };
+
+      var flouter = function() {
+        var imageDataResult=ctx.createImageData(canevas.width,canevas.height);
+    		var granularite=7;
+    		var rouge,vert,bleu;
+    		var pos;
+
+    		for(var i=0;i<canevas.width-canevas.width%granularite;i=i+granularite){
+    			for(var j=0;j<canevas.height-canevas.height%granularite;j=j+granularite){
+    				rouge=0; vert=0; bleu=0;
+            for(var x=i;x<i+granularite;x++){
+              for(var y=j;y<j+granularite;y++){
+                pos=conversion(x,y);
+                rouge+=imageData.data[pos];
+                vert+=imageData.data[pos+1];
+                bleu+=imageData.data[pos+2];
+              }
+            }
+            rouge=rouge/(granularite*granularite);
+            vert=vert/(granularite*granularite);
+            bleu=bleu/(granularite*granularite);
+            for(var x=i;x<i+granularite;x++){
+                for(var y=j;y<j+granularite;y++){
+                  pos=conversion(x,y);
+                  imageDataResult.data[pos]=rouge;
+                  imageDataResult.data[pos+1]=vert;
+                  imageDataResult.data[pos+2]=bleu;
+                  imageDataResult.data[pos+3]=imageData.data[pos+3]; //Transparence identique
+                }
+              }
+            }
+          }
+          ctx.putImageData(imageDataResult,0,0);
+      };
+
+      var sobel = function() {
+        var sobelData = Sobel(imageData);
+
+         // [sobelData].toImageData() returns a new ImageData object
+         var sobelImageData = sobelData.toImageData();
+         ctx.putImageData(sobelImageData, 0, 0);
+      };
+
+      function conversion(x,y){
+        return (y*canevas.width+x)*4;
+      }
+
+
+      function Sobel(imageData) {
+        if (!(this instanceof Sobel)) {
+          return new Sobel(imageData);
+        }
+
+        var width = imageData.width;
+        var height = imageData.height;
+
+        var kernelX = [
+          [-1,0,1],
+          [-2,0,2],
+          [-1,0,1]
+        ];
+
+        var kernelY = [
+          [-1,-2,-1],
+          [0,0,0],
+          [1,2,1]
+        ];
+
+        var sobelData = [];
+        var grayscaleData = [];
+
+        function bindPixelAt(data) {
+          return function(x, y, i) {
+            i = i || 0;
+            return data[((width * y) + x) * 4 + i];
+          };
+        }
+
+        var data = imageData.data;
+        var pixelAt = bindPixelAt(data);
+        var x, y;
+
+        for (y = 0; y < height; y++) {
+          for (x = 0; x < width; x++) {
+            var r = pixelAt(x, y, 0);
+            var g = pixelAt(x, y, 1);
+            var b = pixelAt(x, y, 2);
+
+            var avg = (r + g + b) / 3;
+            grayscaleData.push(avg, avg, avg, 255);
+          }
+        }
+
+        pixelAt = bindPixelAt(grayscaleData);
+
+        for (y = 0; y < height; y++) {
+          for (x = 0; x < width; x++) {
+            var pixelX = (
+                (kernelX[0][0] * pixelAt(x - 1, y - 1)) +
+                (kernelX[0][1] * pixelAt(x, y - 1)) +
+                (kernelX[0][2] * pixelAt(x + 1, y - 1)) +
+                (kernelX[1][0] * pixelAt(x - 1, y)) +
+                (kernelX[1][1] * pixelAt(x, y)) +
+                (kernelX[1][2] * pixelAt(x + 1, y)) +
+                (kernelX[2][0] * pixelAt(x - 1, y + 1)) +
+                (kernelX[2][1] * pixelAt(x, y + 1)) +
+                (kernelX[2][2] * pixelAt(x + 1, y + 1))
+            );
+
+            var pixelY = (
+              (kernelY[0][0] * pixelAt(x - 1, y - 1)) +
+              (kernelY[0][1] * pixelAt(x, y - 1)) +
+              (kernelY[0][2] * pixelAt(x + 1, y - 1)) +
+              (kernelY[1][0] * pixelAt(x - 1, y)) +
+              (kernelY[1][1] * pixelAt(x, y)) +
+              (kernelY[1][2] * pixelAt(x + 1, y)) +
+              (kernelY[2][0] * pixelAt(x - 1, y + 1)) +
+              (kernelY[2][1] * pixelAt(x, y + 1)) +
+              (kernelY[2][2] * pixelAt(x + 1, y + 1))
+            );
+
+            var magnitude = Math.sqrt((pixelX * pixelX) + (pixelY * pixelY))>>>0;
+
+            sobelData.push(magnitude, magnitude, magnitude, 255);
+          }
+        }
+
+        var clampedArray = sobelData;
+
+        if (typeof Uint8ClampedArray === 'function') {
+          clampedArray = new Uint8ClampedArray(sobelData);
+        }
+
+        clampedArray.toImageData = function() {
+          return Sobel.toImageData(clampedArray, width, height);
+        };
+
+        return clampedArray;
+      }
+
+      Sobel.toImageData = function toImageData(data, width, height) {
+        if (typeof ImageData === 'function' && Object.prototype.toString.call(data) === '[object Uint16Array]') {
+          return new ImageData(data, width, height);
+        } else {
+          if (typeof window === 'object' && typeof window.document === 'object') {
+            var canvas = document.createElement('canvas');
+
+            if (typeof canvas.getContext === 'function') {
+              var context = canvas.getContext('2d');
+              var imageData = context.createImageData(width, height);
+              imageData.data.set(data);
+              return imageData;
+            } else {
+              return new FakeImageData(data, width, height);
+            }
+          } else {
+            return new FakeImageData(data, width, height);
+          }
+        }
+      };
+
+      var btninversion = document.getElementById('btninversion');
+      btninversion.addEventListener('click', inversion);
+      var btnniveaudegris = document.getElementById('btnniveaudegris');
+      btnniveaudegris.addEventListener('click', niveaudegris);
+      var btnsepia = document.getElementById('btnsepia');
+      btnsepia.addEventListener('click', sepia);
+      var btneclaircissement = document.getElementById('btneclaircissement');
+      btneclaircissement.addEventListener('click', eclaircissement);
+      var btnflouter = document.getElementById('btnflouter');
+      btnflouter.addEventListener('click', flouter);
+      var btnsobel = document.getElementById('btnsobel');
+      btnsobel.addEventListener('click', sobel);
+  }
+
+
+  </script>
+</html>
